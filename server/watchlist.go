@@ -19,6 +19,7 @@ import (
 
 type searchTvParam struct {
 	Query string `form:"query"`
+	Page int `form:"page"`
 }
 
 func (s *Server) SearchTvSeries(c *gin.Context) (interface{}, error) {
@@ -40,7 +41,7 @@ func(s *Server) SearchMedia(c *gin.Context) (interface{}, error) {
 		return nil, errors.Wrap(err, "bind query")
 	}
 	log.Infof("search media with keyword: %v", q.Query)
-	r, err := s.MustTMDB().SearchMedia(q.Query, s.language, 1)
+	r, err := s.MustTMDB().SearchMedia(q.Query, s.language, q.Page)
 	if err != nil {
 		return nil, errors.Wrap(err, "search tv")
 	}

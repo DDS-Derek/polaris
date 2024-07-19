@@ -29,39 +29,30 @@ final movieWatchlistDataProvider = FutureProvider.autoDispose((ref) async {
   return favList;
 });
 
-var searchPageDataProvider =
-    AsyncNotifierProvider.autoDispose.family<SearchPageData, List<SearchResult>, String>(
-        SearchPageData.new);
+var searchPageDataProvider = AsyncNotifierProvider.autoDispose
+    .family<SearchPageData, SearchResponse, Query>(SearchPageData.new);
 
 var movieTorrentsDataProvider = AsyncNotifierProvider.autoDispose
     .family<MovieTorrentResource, List<TorrentResource>, String>(
         MovieTorrentResource.new);
 
 class SearchPageData
-    extends AutoDisposeFamilyAsyncNotifier<List<SearchResult>, String> {
-  List<SearchResult> list = List.empty(growable: true);
-
+    extends AutoDisposeFamilyAsyncNotifier<SearchResponse, Query> {
   @override
-  FutureOr<List<SearchResult>> build(String arg) async {
-    if (isBlank(arg)) {
-      return List.empty();
+  FutureOr<SearchResponse> build(Query arg) async {
+    if (isBlank(arg.query)) {
+      return SearchResponse(page: 0, results: [], totalPage: 0);
     }
-    list = List.empty(growable: true);
+
     final dio = await APIs.getDio();
-    var resp = await dio.get(APIs.searchUrl, queryParameters: {"query": arg});
+    var resp = await dio.get(APIs.searchUrl,
+        queryParameters: {"query": arg.query, "page": arg.page});
 
     var rsp = ServerResponse.fromJson(resp.data as Map<String, dynamic>);
     if (rsp.code != 0) {
       throw rsp.message;
     }
-
-    var data = rsp.data as Map<String, dynamic>;
-    var results = data["results"] as List<dynamic>;
-    for (final r in results) {
-      var res = SearchResult.fromJson(r);
-      list.add(res);
-    }
-    return list;
+    return SearchResponse.fromJson(resp.data);
   }
 
   Future<void> submit2Watchlist(
@@ -90,6 +81,12 @@ class SearchPageData
       }
     }
   }
+}
+
+class Query {
+  String? query;
+  int? page;
+  Query({this.query, this.page});
 }
 
 class MediaDetail {
@@ -131,6 +128,25 @@ class MediaDetail {
     resolution = json["resolution"];
     storageId = json["storage_id"];
     airDate = json["air_date"];
+  }
+}
+
+class SearchResponse {
+  int? page;
+  int? totalResults;
+  int? totalPage;
+  List<SearchResult>? results;
+
+  SearchResponse({this.page, this.totalResults, this.totalPage, this.results});
+
+  factory SearchResponse.fromJson(Map<String, dynamic> json) {
+    return SearchResponse(
+        page: json["page"],
+        totalPage: json["total_page"],
+        totalResults: json["total_results"],
+        results: (json["results"] as List)
+            .map((v) => SearchResult.fromJson(v))
+            .toList());
   }
 }
 
